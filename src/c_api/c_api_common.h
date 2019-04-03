@@ -42,11 +42,11 @@
  * The finally clause contains procedure to cleanup states when an error happens.
  */
 #ifndef API_BEGIN
-#define API_BEGIN MX_API_BEGIN
+#define API_BEGIN std::cout << "enter " <<__FUNCTION__ << std::endl; MX_API_BEGIN
 #endif
 
 #ifndef API_END
-#define API_END MX_API_END
+#define API_END std::cout << "exit " << __FUNCTION__ << std::endl; MX_API_END
 #endif
 
 #ifndef API_END_HANDLE_ERROR

@@ -116,6 +116,34 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
                                const char **keys,
                                const char **vals,
                                SymbolHandle *out) {
+  //indent++;
+  const char* sname;
+  MXSymbolGetAtomicSymbolName(creator, &sname);
+
+  char keys_string_[512] = "[";
+  char vals_string_[512] = "[";
+  char* keys_string = &keys_string_[1];
+  char* vals_string = &vals_string_[1];
+
+  if (num_param) 
+    for(int i = 0; i < num_param; i++)
+    {
+      keys_string += sprintf(keys_string, "\"%s\", ", keys[i]);
+      vals_string += sprintf(vals_string, "\"%s\", ", vals[i]);
+    }
+
+  keys_string[-2] = ']';
+  vals_string[-2] = ']';
+  keys_string[-1] = '\0';
+  vals_string[-1] = '\0';
+
+  std::cout << __FUNCTION__ << " (" 
+        << "\"" << sname << "\"" << ", "
+        << num_param << ", "
+        << keys_string_
+        << vals_string_
+        << std::endl;
+
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   const nnvm::Op* op = static_cast<const nnvm::Op*>(creator);
@@ -143,6 +171,7 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   *s = nnvm::Symbol::CreateFunctor(op, std::move(kwargs));
   *out = s;
   API_END_HANDLE_ERROR(delete s;);
+  //indent--;
 }
 
 int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {
@@ -201,6 +230,8 @@ int MXSymbolGetAttr(SymbolHandle symbol,
                     const char* key,
                     const char** out,
                     int* success) {
+  std::cout << __FUNCTION__ <<" (key=" << key << ")" << std::endl;
+
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
@@ -224,6 +255,13 @@ int MXSymbolGetAttr(SymbolHandle symbol,
 int MXSymbolSetAttr(SymbolHandle symbol,
                     const char* key,
                     const char* value) {
+
+  std::cout << __FUNCTION__ << " ("
+        << symbol << ", "
+        << "\"" << key << "\", "
+        << "\"" << value << "\""
+        << std::endl;
+ 
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
   API_BEGIN();
   std::vector<std::pair<std::string, std::string> > kwargs;

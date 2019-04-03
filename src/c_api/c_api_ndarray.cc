@@ -86,7 +86,49 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
                             int num_params,
                             const char **param_keys,
                             const char **param_vals) {
-  const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
+
+  char input_ptrs_[512];
+  input_ptrs_[0] = '{';
+  char* input_ptrs = &input_ptrs_[1];
+  for(unsigned int i = 0; i < num_inputs; i++)
+  {
+      input_ptrs += sprintf(input_ptrs, "%p, ", inputs[i]);
+  }
+
+  input_ptrs[-2] = '}';
+  input_ptrs[-1] = '\0';
+
+  const char* sname;
+  MXSymbolGetAtomicSymbolName(creator, &sname);
+
+  char keys_string_[512] = "[";
+  char vals_string_[512] = "[";
+  char* keys_string = &keys_string_[1];
+  char* vals_string = &vals_string_[1];
+
+  if (num_params) 
+    for(int i = 0; i < num_params; i++)
+    {
+      keys_string += sprintf(keys_string, "\"%s\", ", param_keys[i]);
+      vals_string += sprintf(vals_string, "\"%s\", ", param_vals[i]);
+    }
+
+  keys_string[-2] = ']';
+  vals_string[-2] = ']';
+  keys_string[-1] = '\0';
+  vals_string[-1] = '\0';
+
+
+  std::cout << __FUNCTION__ << " (" 
+        << "\"" << sname << "\"" << ", "
+        << "num_inputs=" << num_inputs << ", "
+        << input_ptrs_ << ", "
+        << "num_params=" << num_params << ", "
+        << keys_string_
+        << vals_string_
+        << std::endl;
+
+      const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   nnvm::NodeAttrs attrs = imperative::ParseAttrs(op, num_inputs, num_params,
@@ -113,6 +155,23 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
     for (int i = 0; i < *num_outputs; ++i) ret->ret_handles.push_back(ndoutputs[i]);
     *outputs = reinterpret_cast<NDArrayHandle*>(dmlc::BeginPtr(ret->ret_handles));
   }
+
+
+  char output_ptrs_[512];
+  output_ptrs_[0] = '{';
+  char* output_ptrs = &output_ptrs_[1];
+
+  for(unsigned int i = 0; i < *num_outputs; i++)
+  {
+      output_ptrs += sprintf(output_ptrs, "%p, ", *outputs[i]);
+  }
+
+  output_ptrs[-2] = '}';
+  output_ptrs[-1] = '\0';
+
+  std::cout << __FUNCTION__ << " output: " 
+    << output_ptrs_ << std::endl;  
+
 }
 
 int MXImperativeInvoke(AtomicSymbolCreator creator,
@@ -123,10 +182,13 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
                        int num_params,
                        const char **param_keys,
                        const char **param_vals) {
+
+
   API_BEGIN();
   MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
                          num_params, param_keys, param_vals);
   API_END();
+
 }
 
 int MXImperativeInvokeEx(AtomicSymbolCreator creator,
@@ -179,6 +241,31 @@ int MXCreateCachedOpEx(SymbolHandle handle,
     flags.emplace_back(keys[i], vals[i]);
   }
   *out = new CachedOpPtr(new CachedOp(*sym, flags));
+
+  char keys_string_[512] = "{";
+  char vals_string_[512] = "{";
+  char* keys_string = &keys_string_[1];
+  char* vals_string = &vals_string_[1];
+
+  for(int i = 0; i < num_flags; i++)
+  {
+    keys_string += sprintf(keys_string, "\"%s\", ", keys[i]);
+    vals_string += sprintf(vals_string, "\"%s\", ", vals[i]);
+  }
+
+  keys_string[-2] = '}';
+  vals_string[-2] = '}';
+  keys_string[-1] = '\0';
+  vals_string[-1] = '\0';
+
+  std::cout << __FUNCTION__ << " ("
+    << handle << ", "
+    << num_flags << ", "
+    << keys_string_ << ", "
+    << vals_string_ << ", "
+    << *out
+    << ")" << std::endl;
+
   API_END();
 }
 
@@ -249,6 +336,39 @@ int MXInvokeCachedOpEx(CachedOpHandle handle,
     ret->out_types.emplace_back(out_array[i]->storage_type());
   }
   *out_stypes = dmlc::BeginPtr(ret->out_types);
+
+  char input_string_[512];
+  input_string_[0] = '{';
+  char* input_string = &input_string_[1];
+  for(unsigned int i = 0; i < num_inputs; i++)
+  {
+      input_string += sprintf(input_string, "%p, ", inputs[i]);
+  }
+
+  input_string[-2] = '}';
+  input_string[-1] = '\0';
+
+  char output_string_[512];
+  output_string_[0] = '{';
+  char* output_string = &output_string_[1];
+  for(unsigned int i = 0; i < *num_outputs; i++)
+  {
+      output_string += sprintf(output_string, "%p, ", (*outputs)[i]);
+  }
+
+  output_string[-2] = '}';
+  output_string[-1] = '\0';
+
+  std::cout << __FUNCTION__ << " (" 
+        << handle << ", "
+        << num_inputs << ", "
+        << input_string_
+        << *num_outputs << ", "
+        << output_string_ << ", "
+        << "output_stypes omitted"
+        << std::endl;
+
+
   API_END();
 }
 
@@ -279,7 +399,33 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
 int MXAutogradMarkVariables(mx_uint num_var,
                             NDArrayHandle *var_handles,
                             mx_uint *reqs_array,
-                            NDArrayHandle *grad_handles) {
+#define BUFFER_DEF(VAR, DIM) \
+  char VAR##_string_[DIM] = "{"; \
+  char* VAR##_string = &VAR##_string_[1];
+
+#define FOREACH(VAR, END_VAR, FORMAT) \
+  for(unsigned int i = 0; i < END_VAR;i++) \
+  { VAR##_string += sprintf(VAR##_string, FORMAT, VAR[i]); } \
+  if (END_VAR) \
+  { VAR##_string[-2] = '}'; VAR##_string[-1] = ','; } \
+  VAR##_string[0] = END_VAR ? ' ' : '}';  VAR##_string[1] = '\0';
+                          
+NDArrayHandle *grad_handles) {
+  BUFFER_DEF(var_handles, 512);
+  BUFFER_DEF(reqs_array, 255);
+  BUFFER_DEF(grad_handles, 512);
+
+  FOREACH(var_handles, num_var, "%p, ");
+  FOREACH(reqs_array, num_var, "%d, ");
+  FOREACH(grad_handles, num_var, "%p, ");
+
+  std::cout << __FUNCTION__ << " ("
+        << num_var << ", "
+        << var_handles_string_
+        << reqs_array_string_
+        << grad_handles_string_
+        << std::endl;
+
   API_BEGIN();
   std::vector<NDArray*> variables, gradients;
   std::vector<mx_uint> grad_reqs;
@@ -292,6 +438,8 @@ int MXAutogradMarkVariables(mx_uint num_var,
     grad_reqs.emplace_back(reqs_array[i]);
   }
   Imperative::Get()->MarkVariables(variables, grad_reqs, gradients);
+#undef FOREACH
+#undef BUFFER_DEF
   API_END();
 }
 

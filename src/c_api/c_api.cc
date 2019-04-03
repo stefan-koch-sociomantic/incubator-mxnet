@@ -158,6 +158,7 @@ int MXGetVersion(int *out) {
 }
 
 int MXNDArrayCreateNone(NDArrayHandle *out) {
+  std::cout << __FUNCTION__ << std::endl;
   API_BEGIN();
   *out = new NDArray();
   API_END();
@@ -169,12 +170,25 @@ int MXNDArrayCreate(const mx_uint *shape,
                     int dev_id,
                     int delay_alloc,
                     NDArrayHandle *out) {
+
+  char shapeString[255] = "{";
+  char* sPtr = &shapeString[1];
+  for(int i = 0; i < ndim; i++)
+  {
+      sPtr += sprintf(sPtr, "%d, ", shape[i]);
+  }
+  sPtr[-2] = '}';
+  sPtr[-1] = '\0';
+
+  std::cout << __FUNCTION__ << "(ndim=" << ndim << ", shape=" << shapeString << ", delayAlloc=" <<
+        (delay_alloc ? "true" : "false") << ")" << std::endl;
   API_BEGIN();
   *out = new NDArray(
       mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0);
   API_END();
+  std::cout << __FUNCTION__ << "(output=" << *out << ")" << std::endl;
 }
 
 int MXNDArrayCreateEx(const mx_uint *shape,
@@ -184,13 +198,29 @@ int MXNDArrayCreateEx(const mx_uint *shape,
                     int delay_alloc,
                     int dtype,
                     NDArrayHandle *out) {
+
+  char shapeString[255] = "{";
+  char* sPtr = &shapeString[1];
+  for(int i = 0; i < ndim; i++)
+  {
+      sPtr += sprintf(sPtr, "%d, ", shape[i]);
+  }
+  sPtr[-2] = '}';
+  sPtr[-1] = '\0';
+
+  std::cout << __FUNCTION__ << "(ndim=" << ndim << ", shape=" << shapeString << ", delayAlloc=" <<
+        (delay_alloc ? "true" : "false")  << ", dtype=" << dtype << ")" << std::endl;
+
   API_BEGIN();
   *out = new NDArray(
       mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0,
       dtype);
+  std::cout << __FUNCTION__ << "(output=" << *out << ")" << std::endl;
+
   API_END();
+
 }
 
 int MXNDArrayCreateSparseEx(int storage_type,
@@ -205,6 +235,19 @@ int MXNDArrayCreateSparseEx(int storage_type,
                     mx_uint *aux_ndims,
                     const mx_uint *aux_shape,
                     NDArrayHandle *out) {
+
+  char shapeString[255] = "{";
+  char* sPtr = &shapeString[1];
+  for(int i = 0; i < ndim; i++)
+  {
+      sPtr += sprintf(sPtr, "%d, ", shape[i]);
+  }
+  sPtr[-2] = '}';
+  sPtr[-1] = '\0';
+
+  std::cout << __FUNCTION__ << "(ndim=" << ndim << ", shape=" << shapeString << ", delayAlloc=" <<
+        (delay_alloc ? "true" : "false")  << ", dtype=" << dtype << ")" << std::endl;
+
   API_BEGIN();
   std::vector<int> aux_types;
   mxnet::ShapeVector aux_shapes;
@@ -222,6 +265,8 @@ int MXNDArrayCreateSparseEx(int storage_type,
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0,
       dtype, aux_types, aux_shapes);
+
+  std::cout << __FUNCTION__ << "(output=" << *out << ")" << std::endl;
   API_END();
 }
 
@@ -256,6 +301,11 @@ int MXNDArraySaveRawBytes(NDArrayHandle handle,
 int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
                              const void *data,
                              size_t size) {
+  std::cout << __FUNCTION__ 
+       << "(handle = " << handle << ", " 
+       << "data = " << data << ", " 
+       << "size: " << size <<  ")\n";
+
   API_BEGIN();
   static_cast<NDArray*>(handle)->SyncCopyFromCPU(data, size);
   API_END();
@@ -264,6 +314,12 @@ int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
 int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
                            void *data,
                            size_t size) {
+
+  std::cout << __FUNCTION__ 
+       << "(handle = " << handle << ", " 
+       << "data = " << data << ", " 
+       << "size: " << size <<  ")\n";
+
   API_BEGIN();
   static_cast<NDArray*>(handle)->SyncCopyToCPU(data, size);
   API_END();
@@ -508,6 +564,24 @@ int MXNDArrayGetShape(NDArrayHandle handle,
   } else {
     *out_dim = 0;
   }
+  char shape_string_[512] = "{";
+  char* shape_string = &shape_string_[1];
+  for(unsigned int i = 0; i < *out_dim; i++)
+  {
+    shape_string += sprintf(shape_string, "%d, ", (*out_pdata)[i]);
+  }
+
+  if (*out_dim) 
+  {
+    shape_string[-2] = '}'; shape_string[-1] = '\0';
+  }
+
+  std::cout << __FUNCTION__ << " ("
+        << handle << ", "
+        << out_dim << " (" << *out_dim << ")" << ", "
+        << shape_string_ 
+        << ")" << std::endl;
+
   API_END();
 }
 
