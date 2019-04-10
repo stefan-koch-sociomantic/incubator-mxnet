@@ -31,6 +31,9 @@
 #include "../executor/trt_graph_executor.h"
 #endif  // MXNET_USE_TENSORRT
 
+#include "def_helpers.h"
+
+
 int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   Executor *exec = static_cast<Executor*>(handle);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
@@ -282,74 +285,25 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          NDArrayHandle** aux_states,
                          ExecutorHandle shared_exec_handle,
                          ExecutorHandle* out) {
-#define BUFFER_DEF(VAR, DIM) \
-    char VAR##_string_[DIM] = "{"; \
-    char* VAR##_string = &VAR##_string_[1];
-
-#define FOREACH(VAR, END_VAR, FORMAT) \
-  for(unsigned int i = 0; i < END_VAR;i++) \
-  { VAR##_string += sprintf(VAR##_string, FORMAT, VAR[i]); } \
-  if (END_VAR) \
-  { VAR##_string[-2] = '}'; VAR##_string[-1] = ','; } \
-  VAR##_string[0] = END_VAR ? ' ' : '}';  VAR##_string[1] = '\0';
 
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
-  BUFFER_DEF(g2c_keys, 255);
-  BUFFER_DEF(g2c_dev_types, 128);
-  BUFFER_DEF(g2c_dev_ids, 128);
+  PRINT_ARRAY(g2c_keys, 255, num_g2c_keys, "\"%s\", ");
+  PRINT_ARRAY(g2c_dev_types, 128,  num_g2c_keys, "%d, ");
+  PRINT_ARRAY(g2c_dev_ids, 128, num_g2c_keys, "%d, ");
 
-  FOREACH(g2c_keys, num_g2c_keys, "\"%s\", ");
-  FOREACH(g2c_dev_types, num_g2c_keys, "%d, ");
-  FOREACH(g2c_dev_ids, num_g2c_keys, "%d, ");
+  PRINT_ARRAY(provided_grad_req_names, 255, provided_grad_req_list_len, "\"%s\", ");
+  PRINT_ARRAY(provided_grad_req_types, 255, provided_grad_req_list_len, "\"%s\", ");
+  
+  PRINT_ARRAY(provided_arg_shape_names, 255,  num_provided_arg_shapes, "\"%s\", ");
+  PRINT_ARRAY(provided_arg_shape_data, 128, num_provided_arg_shapes, "%d, ");
+  PRINT_ARRAY(provided_arg_shape_idx, 64, num_provided_arg_shapes, "%d, ");
 
-  BUFFER_DEF(provided_grad_req_names, 255);
-  BUFFER_DEF(provided_grad_req_types, 255);
+  PRINT_ARRAY(provided_arg_dtype_names, 255, num_provided_arg_dtypes, "\"%s\", ");
+  PRINT_ARRAY(provided_arg_dtypes, 255, num_provided_arg_dtypes, "%d, ");
 
-  FOREACH(provided_grad_req_names, provided_grad_req_list_len, "\"%s\", ");
-  FOREACH(provided_grad_req_types, provided_grad_req_list_len, "\"%s\", ");
-
-  BUFFER_DEF(provided_arg_shape_names, 255);
-  BUFFER_DEF(provided_arg_shape_data, 255);
-  BUFFER_DEF(provided_arg_shape_idx, 64);
-
-  FOREACH(provided_arg_shape_names, num_provided_arg_shapes, "\"%s\", ");
-  FOREACH(provided_arg_shape_data, num_provided_arg_shapes, "%d, ");
-  FOREACH(provided_arg_shape_idx, num_provided_arg_shapes, "%d, ");
-
-  BUFFER_DEF(provided_arg_dtype_names, 255);
-  BUFFER_DEF(provided_arg_dtypes, 255);
-
-  FOREACH(provided_arg_dtype_names, num_provided_arg_dtypes, "\"%s\", ");
-  FOREACH(provided_arg_dtypes, num_provided_arg_dtypes, "%d, ");
-
-  BUFFER_DEF(provided_arg_stype_names, 255);
-  BUFFER_DEF(provided_arg_stypes, 255);
-
-  FOREACH(provided_arg_stype_names, num_provided_arg_stypes, "\"%s\", ");
-  FOREACH(provided_arg_stypes, num_provided_arg_stypes, "%d, ");
-
-  std::cout << __FUNCTION__ << " ("
-        << num_g2c_keys << ", "
-        << g2c_keys_string_
-        << g2c_dev_types_string_
-        << g2c_dev_ids_string_
-        << provided_grad_req_list_len << ", "
-        << provided_grad_req_names_string_
-        << provided_grad_req_types_string_
-        << num_provided_arg_shapes << ", "
-        << provided_arg_shape_names_string_
-        << provided_arg_shape_data_string_ 
-        << provided_arg_shape_idx_string_
-        << num_provided_arg_dtypes << ", "
-        << provided_arg_dtype_names_string_ 
-        << provided_arg_dtypes_string_
-        << num_provided_arg_stypes << ", "
-        << provided_arg_stype_names_string_
-        << provided_arg_stypes_string_
-        << num_shared_arg_names << ", "
-        << "... bunnch of stuff omitted ..." << ")"
-        << std::endl;
+  PRINT_ARRAY(provided_arg_stype_names, 255, num_provided_arg_stypes, "\"%s\", ");
+  PRINT_ARRAY(provided_arg_stypes, 128, num_provided_arg_stypes, "%d, ");
 
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(symbol_handle);
@@ -631,6 +585,33 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
     *updated_shared_buffer_name_list = &(ret->ret_vec_charp[0]);
   }
 
+
+  BUFFER_DEF(in_args, 512);
+  FOREACH_NAMED(in_args, *in_args, *num_in_args, "%p, ");
+
+  std::cout << __FUNCTION__ << " ("
+        << ARG(num_g2c_keys) << ", "
+        << ARR(g2c_keys)
+        << ARR(g2c_dev_types)
+        << ARR(g2c_dev_ids)
+        << ARG(provided_grad_req_list_len)
+        << ARR(provided_grad_req_names)
+        << ARR(provided_grad_req_types)
+        << ARG(num_provided_arg_shapes)
+        << ARR(provided_arg_shape_names)
+        << ARR(provided_arg_shape_data) 
+        << ARR(provided_arg_shape_idx)
+        << ARG(num_provided_arg_dtypes)
+        << ARR(provided_arg_dtype_names) 
+        << ARR(provided_arg_dtypes)
+        << ARG(num_provided_arg_stypes)
+        << ARR(provided_arg_stype_names)
+        << ARR(provided_arg_stypes)
+        << ARG(num_shared_arg_names)
+        << "... bunnch of stuff omitted ..." << ")"
+        << ARG(*num_in_args)
+        << ARR(in_args)
+        << std::endl;
     
 
   BUFFER_DEF(shared_arg_name_list, 255);
@@ -780,3 +761,5 @@ int MXExecutorSetMonitorCallbackEX(ExecutorHandle handle,
   exec->SetMonitorCallback(clbk, monitor_all);
   API_END();
 }
+
+#include "undef_helpers.h"

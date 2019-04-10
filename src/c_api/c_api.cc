@@ -170,25 +170,25 @@ int MXNDArrayCreate(const mx_uint *shape,
                     int dev_id,
                     int delay_alloc,
                     NDArrayHandle *out) {
+#include "def_helpers.h"
+  PRINT_ARRAY(shape, 128, ndim, "%d, ");
 
-  char shapeString[255] = "{";
-  char* sPtr = &shapeString[1];
-  for(int i = 0; i < ndim; i++)
-  {
-      sPtr += sprintf(sPtr, "%d, ", shape[i]);
-  }
-  sPtr[-2] = '}';
-  sPtr[-1] = '\0';
-
-  std::cout << __FUNCTION__ << "(ndim=" << ndim << ", shape=" << shapeString << ", delayAlloc=" <<
-        (delay_alloc ? "true" : "false") << ")" << std::endl;
   API_BEGIN();
   *out = new NDArray(
       mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0);
+
+   std::cout << __FUNCTION__ << " ("
+      << ARR(shape)
+      << ARG(ndim)
+      << ARG(dev_type)
+      << ARG(dev_id)
+      << ARG(*out)
+      << ")" << std::endl;
+
   API_END();
-  std::cout << __FUNCTION__ << "(output=" << *out << ")" << std::endl;
+#include "undef_helpers.h"
 }
 
 int MXNDArrayCreateEx(const mx_uint *shape,
@@ -245,7 +245,7 @@ int MXNDArrayCreateSparseEx(int storage_type,
   sPtr[-2] = '}';
   sPtr[-1] = '\0';
 
-  std::cout << __FUNCTION__ << "(ndim=" << ndim << ", shape=" << shapeString << ", delayAlloc=" <<
+  std::cout << __FUNCTION__ << "(storage_type=" << storage_type << ", ndim=" << ndim << ", shape=" << shapeString << ", delayAlloc=" <<
         (delay_alloc ? "true" : "false")  << ", dtype=" << dtype << ")" << std::endl;
 
   API_BEGIN();
