@@ -54,8 +54,8 @@ int MXExecutorFree(ExecutorHandle handle) {
 int MXExecutorForward(ExecutorHandle handle, int is_train) {
 
   std::cout << __FUNCTION__ << " ("
-        << handle << ", "
-        << is_train << ")"
+        << ARG(handle) << ", "
+        << ARG(is_train) << ")"
         << std::endl;
 
   API_BEGIN();
@@ -77,14 +77,11 @@ int MXExecutorBackwardEx(ExecutorHandle handle,
                          NDArrayHandle *head_grads,
                          int is_train) {
 
-  char nd_array_handles_buf[512] = "{";
-  char* nd_array_handles_string = &nd_array_handles_buf[1];
-  nd_array_handles_buf[1] = '}';
-  nd_array_handles_buf[2] = '\0';
-   
+  PRINT_ARRAY(head_grads, 255, len, "%p, ");
+  
   std::cout << __FUNCTION__ << " ("
-        << len << ", "
-        << "{" << nd_array_handles_buf << "}, "
+        << ARG(len)
+        << ARR(head_grads)
         << is_train << ")"
         << std::endl;
 
@@ -114,6 +111,15 @@ int MXExecutorOutputs(ExecutorHandle handle,
   }
   *out_size = heads.size();
   *out = dmlc::BeginPtr(ret->ret_handles);
+
+  BUFFER_DEF(out, 255);
+  FOREACH_NAMED(out, *out, *out_size, "%p, ");
+
+  std::cout << " ("
+    << ARG(handle)
+    << ARG(*out_size)
+    << ARR(out);
+
   API_END();
 }
 

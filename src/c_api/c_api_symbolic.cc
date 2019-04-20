@@ -33,6 +33,8 @@
 #include "../executor/exec_pass.h"
 #include "../operator/subgraph/subgraph_property.h"
 
+#include "def_helpers.h"
+
 namespace mxnet {
 namespace op {
 void RegisterLegacyOpProp();
@@ -137,13 +139,6 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   keys_string[-1] = '\0';
   vals_string[-1] = '\0';
 
-  std::cout << __FUNCTION__ << " (" 
-        << "\"" << sname << "\"" << ", "
-        << num_param << ", "
-        << keys_string_
-        << vals_string_
-        << std::endl;
-
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   const nnvm::Op* op = static_cast<const nnvm::Op*>(creator);
@@ -170,6 +165,15 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   }
   *s = nnvm::Symbol::CreateFunctor(op, std::move(kwargs));
   *out = s;
+  std::cout << __FUNCTION__ << " (" 
+        << "\"" << sname << "\"" << ", "
+        << num_param << ", "
+        << keys_string_
+        << vals_string_
+        << "out=" << *out
+        << std::endl;
+
+
   API_END_HANDLE_ERROR(delete s;);
   //indent--;
 }
@@ -359,7 +363,20 @@ int MXSymbolCompose(SymbolHandle sym,
                     mx_uint num_args,
                     const char** keys,
                     SymbolHandle* args) {
-  return NNSymbolCompose(sym, name, num_args, keys, args);
+  auto r = NNSymbolCompose(sym, name, num_args, keys, args);
+
+    PRINT_ARRAY(keys, 255, num_args, "\"%s\", ");
+    PRINT_ARRAY(args, 255, num_args, "%p, ");
+
+  std::cout << __FUNCTION__ << " ("
+    << ARG(sym)
+    << ARG(name)
+    << ARG(num_args)
+    << ARR(keys)
+    << ARR(args)
+    << ")" << std::endl;
+
+    return r;
 }
 
 // adapter functions that re-implements the functions.
@@ -772,3 +789,4 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
+#include "undef_helpers.h"
